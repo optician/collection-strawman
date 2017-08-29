@@ -49,6 +49,14 @@ object LongMap {
   def apply[T](elems: (Long, T)*): LongMap[T] =
     elems.foldLeft(empty[T])((x, y) => x.updated(y._1, y._2))
 
+  def from[V](coll: IterableOnce[(Long, V)]): LongMap[V] =
+    newBuilder[V]().addAll(coll).result()
+
+  def newBuilder[V](): Builder[(Long, V), LongMap[V]] =
+    new ImmutableBuilder[(Long, V), LongMap[V]](empty) {
+      def addOne(elem: (Long, V)): this.type = { elems = elems + elem; this }
+    }
+
   private[immutable] case object Nil extends LongMap[Nothing] {
     // Important, don't remove this! See IntMap for explanation.
     override def equals(that : Any) = that match {
@@ -439,4 +447,7 @@ sealed abstract class LongMap[+T] extends Map[Long, T]
     case LongMap.Nil => throw new IllegalStateException("Empty set")
   }
 
+  def map[V2](f: ((Long, T)) => (Long, V2)): LongMap[V2] = LongMap.from(View.Map(coll, f))
+
+  def flatMap[V2](f: ((Long, T)) => IterableOnce[(Long, V2)]): LongMap[V2] = LongMap.from(View.FlatMap(coll, f))
 }
