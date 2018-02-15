@@ -4,7 +4,7 @@ package immutable
 
 import strawman.collection.mutable.{ArrayBuffer, Builder}
 
-import scala.{Any, AnyRef, Boolean, Int, None, NoSuchElementException, noinline, Nothing, Option, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, deprecated}
+import scala.{Any, AnyRef, Boolean, Int, NoSuchElementException, None, Nothing, Option, PartialFunction, Some, StringContext, Unit, UnsupportedOperationException, deprecated, noinline}
 import scala.Predef.String
 import scala.annotation.tailrec
 import scala.annotation.unchecked.uncheckedVariance
@@ -235,8 +235,8 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   protected[this] def cons[T](hd: => T, tl: => CC[T]): CC[T]
 
-  /** Force the evaluation of both the head and the tail of this `LazyList` */
-  def force: Option[(A, CC[A])]
+  /** Force the evaluation of the whole `LazyList` */
+  def force: CC[A]
 
   override def nonEmpty: Boolean = !isEmpty
 
@@ -255,11 +255,12 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   override def sameElements[B >: A](that: IterableOnce[B]): Boolean = {
     @tailrec def lazyListEq(a: CC[_], b: CC[_]): Boolean =
-      if (a eq b) true else {
-        (a.force, b.force) match {
-          case (Some((ah, at)), Some((bh, bt))) => (ah == bh) && lazyListEq(at, bt)
-          case (None, None) => true
-          case _ => false
+      (a eq b) || {
+        if (a.nonEmpty && b.nonEmpty && a.head == b.head) {
+          lazyListEq(a.tail, b.tail)
+        }
+        else {
+          a.isEmpty && b.isEmpty
         }
       }
     that match {
@@ -441,7 +442,6 @@ sealed private[immutable] trait LazyListFactory[+CC[+X] <: LinearSeq[X] with Laz
     newCons(head, stream.tail.collect(pf))
   }
 
-  type Evaluated[+A] <: Option[(A, CC[A])]
 }
 
 /**
@@ -453,14 +453,12 @@ object LazyList extends LazyListFactory[LazyList] {
 
   protected[this] def newCons[T](hd: => T, tl: => LazyList[T]): LazyList[T] = new LazyList.Cons(hd, tl)
 
-  type Evaluated[+A] = Option[(A, LazyList[A])]
-
   object Empty extends LazyList[Nothing] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    def force: Evaluated[Nothing] = None
-    override def toString: String = "Empty"
+    override def force: LazyList[Nothing] = this
+    override def toString(): String = "Empty"
   }
 
   final class Cons[A](hd: => A, tl: => LazyList[A]) extends LazyList[A] {
@@ -475,8 +473,12 @@ object LazyList extends LazyListFactory[LazyList] {
       tlEvaluated = true
       tl
     }
-    def force: Evaluated[A] = Some((head, tail))
-    override def toString: String =
+    override def force: LazyList[A] = {
+      head
+      tail.force
+      this
+    }
+    override def toString(): String =
       if (hdEvaluated) s"$head #:: ${if (tlEvaluated) tail.toString else "?"}"
       else "LazyList(?)"
   }
@@ -506,7 +508,8 @@ object LazyList extends LazyListFactory[LazyList] {
   }
 
   object #:: {
-    def unapply[A](s: LazyList[A]): Evaluated[A] = s.force
+    def unapply[A](s: LazyList[A]): Option[(A, LazyList[A])] =
+      if (s.nonEmpty) Some(s.head, s.tail) else None
   }
 
   def from[A](coll: collection.IterableOnce[A]): LazyList[A] = coll match {
@@ -583,14 +586,12 @@ object Stream extends LazyListFactory[Stream] {
 
   protected[this] def newCons[T](hd: => T, tl: => Stream[T]): Stream[T] = new Stream.Cons(hd, tl)
 
-  type Evaluated[+A] = Option[(A, Stream[A])]
-
   object Empty extends Stream[Nothing] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    def force: Evaluated[Nothing] = None
-    override def toString: String = "Empty"
+    override def force: Stream[Nothing] = this
+    override def toString(): String = "Empty"
   }
 
   final class Cons[A](override val head: A, tl: => Stream[A]) extends Stream[A] {
@@ -600,9 +601,13 @@ object Stream extends LazyListFactory[Stream] {
       tlEvaluated = true
       tl
     }
-    def force: Evaluated[A] = Some((head, tail))
-    override def toString: String =
+    override def force: Stream[A] = {
+      tail.force
+      this
+    }
+    override def toString(): String =
       s"$head #:: ${if (tlEvaluated) tail.toString else "?"}"
+
   }
 
   /** An alternative way of building and matching Streams using Stream.cons(hd, tl).
@@ -630,7 +635,8 @@ object Stream extends LazyListFactory[Stream] {
   }
 
   object #:: {
-    def unapply[A](s: Stream[A]): Evaluated[A] = s.force
+    def unapply[A](s: Stream[A]): Option[(A, Stream[A])] =
+      if (s.nonEmpty) Some(s.head, s.tail) else None
   }
 
   def from[A](coll: collection.IterableOnce[A]): Stream[A] = coll match {

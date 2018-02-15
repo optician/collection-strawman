@@ -1,5 +1,6 @@
 package strawman.collection.immutable
 
+import strawman.collection.Iterator
 import org.junit.runner.RunWith
 import org.junit.runners.JUnit4
 import org.junit.{Test, Ignore}
@@ -139,4 +140,28 @@ class LazyListTest {
     assertEquals(LazyList(3), LazyList(1, 2, 3).drop(2))
     assertEquals(LazyList(3, 4), LazyList(1, 2, 3, 4).drop(2))
   }
+
+  @Test
+  def testForceReturnsEvaluatedLazyList() : Unit = {
+    var i = 0
+    def f: Int = { i += 1; i }
+    val xs = LazyList.from(Iterator.fill(3)(f))
+    assertEquals(0, i)
+    xs.force
+    assertEquals(3, i)
+    // it's possible to implement `force` with incorrect string representation
+    // (to forget about `tlEvaluated` update)
+    assertEquals( "1 #:: 2 #:: 3 #:: Empty", xs.toString())
+  }
+
+  @Test
+  def testSameElements(): Unit = {
+    assert(LazyList().sameElements(LazyList()))
+    assert(!LazyList().sameElements(LazyList(1)))
+    assert(LazyList(1,2).sameElements(LazyList(1,2)))
+    assert(!LazyList(1,2).sameElements(LazyList(1)))
+    assert(!LazyList(1).sameElements(LazyList(1,2)))
+    assert(!LazyList(1).sameElements(LazyList(2)))
+  }
+
 }
