@@ -253,22 +253,6 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   override def equals(that: Any): Boolean =
     if (this eq that.asInstanceOf[AnyRef]) true else super.equals(that)
 
-  override def sameElements[B >: A](that: IterableOnce[B]): Boolean = {
-    @tailrec def lazyListEq(a: CC[_], b: CC[_]): Boolean =
-      (a eq b) || {
-        if (a.nonEmpty && b.nonEmpty && a.head == b.head) {
-          lazyListEq(a.tail, b.tail)
-        }
-        else {
-          a.isEmpty && b.isEmpty
-        }
-      }
-    that match {
-      case that: LazyListOps[_, _, _] => lazyListEq(coll, that.asInstanceOf[CC[_]])
-      case _ => super.sameElements(that)
-    }
-  }
-
   override def scanLeft[B](z: B)(op: (B, A) => B): CC[B] =
     if (isEmpty) z +: iterableFactory.empty
     else cons(z, tail.scanLeft(op(z, head))(op))
