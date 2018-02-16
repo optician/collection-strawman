@@ -457,7 +457,7 @@ object LazyList extends LazyListFactory[LazyList] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    override def force: LazyList[Nothing] = this
+    def force: LazyList[Nothing] = this
     override def toString(): String = "Empty"
   }
 
@@ -473,7 +473,7 @@ object LazyList extends LazyListFactory[LazyList] {
       tlEvaluated = true
       tl
     }
-    override def force: LazyList[A] = {
+    def force: LazyList[A] = {
       head
       tail.force
       this
@@ -509,7 +509,7 @@ object LazyList extends LazyListFactory[LazyList] {
 
   object #:: {
     def unapply[A](s: LazyList[A]): Option[(A, LazyList[A])] =
-      if (s.nonEmpty) Some(s.head, s.tail) else None
+      if (s.nonEmpty) Some((s.head, s.tail)) else None
   }
 
   def from[A](coll: collection.IterableOnce[A]): LazyList[A] = coll match {
@@ -590,7 +590,7 @@ object Stream extends LazyListFactory[Stream] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    override def force: Stream[Nothing] = this
+    def force: Stream[Nothing] = this
     override def toString(): String = "Empty"
   }
 
@@ -601,7 +601,7 @@ object Stream extends LazyListFactory[Stream] {
       tlEvaluated = true
       tl
     }
-    override def force: Stream[A] = {
+    def force: Stream[A] = {
       tail.force
       this
     }
@@ -636,7 +636,7 @@ object Stream extends LazyListFactory[Stream] {
 
   object #:: {
     def unapply[A](s: Stream[A]): Option[(A, Stream[A])] =
-      if (s.nonEmpty) Some(s.head, s.tail) else None
+      if (s.nonEmpty) Some((s.head, s.tail)) else None
   }
 
   def from[A](coll: collection.IterableOnce[A]): Stream[A] = coll match {
