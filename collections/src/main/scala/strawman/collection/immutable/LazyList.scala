@@ -236,7 +236,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   protected[this] def cons[T](hd: => T, tl: => CC[T]): CC[T]
 
   /** Force the evaluation of the whole `LazyList` */
-  def force: CC[A]
+  def force: this.type
 
   override def nonEmpty: Boolean = !isEmpty
 
@@ -441,7 +441,7 @@ object LazyList extends LazyListFactory[LazyList] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: LazyList[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    def force: LazyList[Nothing] = this
+    def force: this.type = this
     override def toString(): String = "Empty"
   }
 
@@ -457,7 +457,7 @@ object LazyList extends LazyListFactory[LazyList] {
       tlEvaluated = true
       tl
     }
-    def force: LazyList[A] = {
+    def force: this.type = {
       head
       tail.force
       this
@@ -574,7 +574,7 @@ object Stream extends LazyListFactory[Stream] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
-    def force: Stream[Nothing] = this
+    def force: this.type = this
     override def toString(): String = "Empty"
   }
 
@@ -585,7 +585,7 @@ object Stream extends LazyListFactory[Stream] {
       tlEvaluated = true
       tl
     }
-    def force: Stream[A] = {
+    def force: this.type = {
       tail.force
       this
     }
