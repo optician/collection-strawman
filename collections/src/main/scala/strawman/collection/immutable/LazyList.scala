@@ -458,8 +458,22 @@ object LazyList extends LazyListFactory[LazyList] {
       tl
     }
     def force: this.type = {
-      head
-      tail.force
+      // Use standard 2x 1x iterator trick for cycle detection ("those" is slow one)
+      var these, those: LazyList[A] = this
+
+      def hareStep(): Unit = {
+        these.head
+        these = these.tail
+      }
+      if (!these.isEmpty) hareStep()
+      while (those ne these) {
+        if (these.isEmpty) return this
+        hareStep()
+        if (these.isEmpty) return this
+        hareStep()
+        if (these eq those) return this
+        those = those.tail
+      }
       this
     }
     override def toString(): String =
@@ -586,7 +600,17 @@ object Stream extends LazyListFactory[Stream] {
       tl
     }
     def force: this.type = {
-      tail.force
+      // Use standard 2x 1x iterator trick for cycle detection ("those" is slow one)
+      var these, those: Stream[A] = this
+      if (!these.isEmpty) these = these.tail
+      while (those ne these) {
+        if (these.isEmpty) return this
+        these = these.tail
+        if (these.isEmpty) return this
+        these = these.tail
+        if (these eq those) return this
+        those = those.tail
+      }
       this
     }
     override def toString(): String =
