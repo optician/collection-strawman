@@ -235,7 +235,15 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
 
   protected[this] def cons[T](hd: => T, tl: => CC[T]): CC[T]
 
-  /** Force the evaluation of the whole `LazyList` */
+  /** Forces evaluation of the whole `LazyList` and returns it.
+    *
+    * @note Often we use `LazyList`s to represent an infinite set or series.  If
+    * that's the case for your particular `LazyList` then this function will never
+    * return and will probably crash the VM with an `OutOfMemory` exception.
+    * This function will not hang on a finite cycle, however.
+    *
+    *  @return The fully realized `LazyList`.
+    */
   def force: this.type
 
   override def nonEmpty: Boolean = !isEmpty
@@ -246,7 +254,7 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
     * @return The lazy list containing elements of this lazy list and the iterable object.
     */
   def lazyAppendAll[B >: A](suffix: => collection.IterableOnce[B]): CC[B] =
-    if (isEmpty) iterableFactory.from(suffix.iterator()) else cons[B](head, tail.lazyAppendAll(suffix))
+    if (isEmpty) iterableFactory.from(suffix) else cons[B](head, tail.lazyAppendAll(suffix))
 
   override def className = "LazyList"
 
@@ -329,11 +337,11 @@ sealed private[immutable] trait LazyListOps[+A, +CC[+X] <: LinearSeq[X] with Laz
   else {
     // establish !prefix.isEmpty || nonEmptyPrefix.isEmpty
     var nonEmptyPrefix: CC[A] = coll
-    var prefix = iterableFactory.from(f(nonEmptyPrefix.head).iterator())
+    var prefix = iterableFactory.from(f(nonEmptyPrefix.head))
     while (!nonEmptyPrefix.isEmpty && prefix.isEmpty) {
       nonEmptyPrefix = nonEmptyPrefix.tail
       if(!nonEmptyPrefix.isEmpty)
-        prefix = iterableFactory.from(f(nonEmptyPrefix.head).iterator())
+        prefix = iterableFactory.from(f(nonEmptyPrefix.head))
     }
 
     if (nonEmptyPrefix.isEmpty) iterableFactory.empty
@@ -588,6 +596,15 @@ object Stream extends LazyListFactory[Stream] {
     override def isEmpty: Boolean = true
     override def head: Nothing = throw new NoSuchElementException("head of empty lazy list")
     override def tail: Stream[Nothing] = throw new UnsupportedOperationException("tail of empty lazy list")
+    /** Forces evaluation of the whole `Stream` and returns it.
+      *
+      * @note Often we use `Stream`s to represent an infinite set or series.  If
+      * that's the case for your particular `Stream` then this function will never
+      * return and will probably crash the VM with an `OutOfMemory` exception.
+      * This function will not hang on a finite cycle, however.
+      *
+      *  @return The fully realized `Stream`.
+      */
     def force: this.type = this
     override def toString(): String = "Empty"
   }
@@ -599,6 +616,15 @@ object Stream extends LazyListFactory[Stream] {
       tlEvaluated = true
       tl
     }
+    /** Forces evaluation of the whole `Stream` and returns it.
+      *
+      * @note Often we use `Stream`s to represent an infinite set or series.  If
+      * that's the case for your particular `Stream` then this function will never
+      * return and will probably crash the VM with an `OutOfMemory` exception.
+      * This function will not hang on a finite cycle, however.
+      *
+      *  @return The fully realized `Stream`.
+      */
     def force: this.type = {
       // Use standard 2x 1x iterator trick for cycle detection ("those" is slow one)
       var these, those: Stream[A] = this
