@@ -468,17 +468,17 @@ object LazyList extends LazyListFactory[LazyList] {
     def force: this.type = {
       // Use standard 2x 1x iterator trick for cycle detection ("those" is slow one)
       var these, those: LazyList[A] = this
-
-      def hareStep(): Unit = {
+      if (!these.isEmpty) {
         these.head
         these = these.tail
       }
-      if (!these.isEmpty) hareStep()
       while (those ne these) {
         if (these.isEmpty) return this
-        hareStep()
+        these.head
+        these = these.tail
         if (these.isEmpty) return this
-        hareStep()
+        these.head
+        these = these.tail
         if (these eq those) return this
         those = those.tail
       }

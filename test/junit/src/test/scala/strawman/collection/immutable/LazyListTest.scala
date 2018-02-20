@@ -154,7 +154,9 @@ class LazyListTest {
     assertEquals( "1 #:: 2 #:: 3 #:: Empty", xs.toString())
   }
 
-  @Test
+  val cycle1: LazyList[Int] = 1 #:: 2 #:: cycle1
+  val cycle2: LazyList[Int] = 1 #:: 2 #:: 3 #:: cycle2
+  @Test(timeout=10000)
   def testSameElements(): Unit = {
     assert(LazyList().sameElements(LazyList()))
     assert(!LazyList().sameElements(LazyList(1)))
@@ -162,6 +164,9 @@ class LazyListTest {
     assert(!LazyList(1,2).sameElements(LazyList(1)))
     assert(!LazyList(1).sameElements(LazyList(1,2)))
     assert(!LazyList(1).sameElements(LazyList(2)))
+    assert(cycle1.sameElements(cycle1))
+    assert(!cycle1.sameElements(cycle2))
+    assert(!cycle1.sameElements(cycle2))
   }
 
 }

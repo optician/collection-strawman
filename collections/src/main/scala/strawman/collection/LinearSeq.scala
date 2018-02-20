@@ -128,10 +128,10 @@ trait LinearSeqOps[+A, +CC[X] <: LinearSeq[X], +C <: LinearSeq[A]] extends Any w
   }
 
   override def sameElements[B >: A](that: IterableOnce[B]): Boolean = {
-    @tailrec def lazyListEq(a: LinearSeq[B], b: LinearSeq[B]): Boolean =
+    @tailrec def linearSeqEq(a: LinearSeq[B], b: LinearSeq[B]): Boolean =
       (a eq b) || {
         if (a.nonEmpty && b.nonEmpty && a.head == b.head) {
-          lazyListEq(a.tail, b.tail)
+          linearSeqEq(a.tail, b.tail)
         }
         else {
           a.isEmpty && b.isEmpty
@@ -139,7 +139,7 @@ trait LinearSeqOps[+A, +CC[X] <: LinearSeq[X], +C <: LinearSeq[A]] extends Any w
       }
 
     that match {
-      case that: LinearSeq[B] => lazyListEq(coll, that)
+      case that: LinearSeq[B] => linearSeqEq(coll, that)
       case _ => super.sameElements(that)
     }
   }
