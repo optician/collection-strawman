@@ -47,6 +47,6 @@ class HashMapTest {
       "value2"
     })
 
-    assertEquals(List((key, "value2")), List.from(map.iterator()))
+    assertEquals(List((key, "value2")), map.toList)
   }
 }
